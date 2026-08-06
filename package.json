@@ -1,0 +1,12 @@
+{
+  "name": "pi-bro",
+  "version": "0.0.1",
+  "description": "Run Pi's agent core in a browser: an ExecutionEnv over a single virtual filesystem, with no shell.",
+  "keywords": ["pi", "agent", "browser", "lightning-fs", "execution-env"],
+  "license": "MIT",
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "peerDependencies": { "@earendil-works/pi-agent-core": ">=0.83.0" },
+  "devDependencies": { "typescript": "5.6.3" },
+  "scripts": { "typecheck": "tsc --noEmit" }
+}

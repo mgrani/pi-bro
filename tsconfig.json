@@ -1,0 +1,9 @@
+{
+  "compilerOptions": {
+    "target": "ES2022", "module": "ESNext", "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM"], "strict": true, "noEmit": true, "skipLibCheck": true,
+    "baseUrl": ".",
+    "paths": { "@earendil-works/pi-agent-core": ["../pi-g0/node_modules/@earendil-works/pi-agent-core/dist/index.d.ts"] }
+  },
+  "include": ["src"]
+}
