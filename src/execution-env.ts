@@ -21,6 +21,7 @@ import {
 	type Result,
 	type ShellExecOptions,
 } from "@earendil-works/pi-agent-core";
+import { createAllowlistShell } from "./shell";
 
 /** The subset of lightning-fs (and any node-fs-alike promises API) we rely on. */
 export interface PromiseFs {
@@ -69,12 +70,23 @@ export interface BrowserExecutionEnvOptions {
 	cwd?: string;
 	/** Scratch space is a PATH inside the one tree, never a second filesystem. */
 	tmpDir?: string;
+	/**
+	 * Enable the read-only command allowlist behind `exec` (see `./shell`).
+	 *
+	 * Off by default, and that default is the honest one: with no shell the
+	 * refusal below is true, and a host that has not yet decided to offer
+	 * composition should not silently acquire it. When enabled, register
+	 * `createBashTool` and put {@link allowlistSummary} in its description --
+	 * the boundary works by being stated, not by being discovered.
+	 */
+	shell?: boolean;
 }
 
 export function createBrowserExecutionEnv(options: BrowserExecutionEnvOptions): ExecutionEnv {
 	const fs = options.fs;
 	const cwd = options.cwd ?? "/repo";
 	const tmpDir = options.tmpDir ?? `${cwd}/.tmp`;
+	const allowlistExec = options.shell ? createAllowlistShell({ fs, cwd }) : null;
 	let tempSeq = 0;
 
 	const abs = (p: string) => normalize(cwd, p);
@@ -224,8 +236,9 @@ export function createBrowserExecutionEnv(options: BrowserExecutionEnvOptions): 
 			return ok(p);
 		},
 
-		// -- Shell: refuses as a value ---------------------------------------
+		// -- Shell: the allowlist when enabled, else refuses as a value ------
 		async exec(command: string, _options?: ShellExecOptions) {
+			if (allowlistExec) return allowlistExec(command);
 			// `shell_unavailable` is Pi's own code for exactly this, so the
 			// refusal is a first-class outcome rather than an invented one.
 			return {
