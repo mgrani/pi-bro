@@ -31,6 +31,9 @@ export interface PromiseFs {
 	readdir(path: string): Promise<string[]>;
 	mkdir(path: string): Promise<void>;
 	rmdir(path: string): Promise<void>;
+	/** lightning-fs provides this; required since pi-agent-core 0.84 put
+	 *  `renameFile` on `ExecutionEnv`. */
+	rename(oldPath: string, newPath: string): Promise<void>;
 	stat(path: string): Promise<{ size: number; isDirectory(): boolean; isFile(): boolean; isSymbolicLink(): boolean }>;
 	lstat(path: string): Promise<{ size: number; isDirectory(): boolean; isFile(): boolean; isSymbolicLink(): boolean }>;
 	readlink?(path: string): Promise<string>;
@@ -168,6 +171,29 @@ export function createBrowserExecutionEnv(options: BrowserExecutionEnvOptions): 
 				return ok(undefined);
 			} catch (err) {
 				return toFileError(err, p);
+			}
+		},
+		/**
+		 * Added for pi-agent-core 0.84, which made `renameFile` part of
+		 * `ExecutionEnv`. lightning-fs has `rename`, so this is a direct
+		 * mapping rather than a copy-then-delete — the latter would lose the
+		 * atomicity a rename gives, and the JSONL session repo (one of the
+		 * few callers) relies on rename to swap a file into place.
+		 *
+		 * The destination's parent is created first, matching `writeFile`:
+		 * renaming into a directory that does not exist yet is a plausible
+		 * thing for an agent to attempt, and the underlying ENOENT names the
+		 * *file* rather than the missing parent, which reads as the wrong bug.
+		 */
+		async renameFile(sourcePath, destinationPath) {
+			const from = abs(sourcePath);
+			const to = abs(destinationPath);
+			try {
+				await mkdirp(to.slice(0, to.lastIndexOf("/")) || "/");
+				await fs.rename(from, to);
+				return ok(undefined);
+			} catch (err) {
+				return toFileError(err, from);
 			}
 		},
 		async appendFile(path, content) {
